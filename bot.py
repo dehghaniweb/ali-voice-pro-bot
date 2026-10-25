@@ -185,6 +185,7 @@ BTN_FAST = "⚡ سریع"
 
 BTN_STATUS = "📊 وضعیت"
 BTN_HELP = "❓ راهنما"
+BTN_CLEAR = "🧹 پاک کردن پیام‌ها"
 
 
 def main_menu():
@@ -197,7 +198,7 @@ def main_menu():
 
         [BTN_SLOW, BTN_NORMAL, BTN_FAST],
 
-        [BTN_STATUS, BTN_HELP],
+        [BTN_STATUS, BTN_HELP, BTN_CLEAR],
 
     ]
 
@@ -348,6 +349,32 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =========================
+# CLEAR CHAT
+# =========================
+
+async def clear_chat(bot, chat_id, last_id, limit=2000):
+
+    first = max(1, last_id - limit)
+
+    ids = list(range(last_id, first - 1, -1))
+
+    for i in range(0, len(ids), 100):
+
+        batch = ids[i:i + 100]
+
+        try:
+
+            await bot.delete_messages(
+                chat_id=chat_id,
+                message_ids=batch
+            )
+
+        except Exception as e:
+
+            print("CLEAR ERROR:", repr(e))
+
+
+# =========================
 # BUTTON HANDLER (inline)
 # =========================
 
@@ -358,6 +385,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     data = query.data
+
+    if data == "clear_no":
+
+        await query.edit_message_text(
+            "❌ پاک کردن لغو شد."
+        )
+
+        return
+
+    if data == "clear_yes":
+
+        chat_id = query.message.chat_id
+
+        last_id = query.message.message_id
+
+        await clear_chat(
+            context.bot,
+            chat_id,
+            last_id
+        )
+
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="🧹 پیام‌ها پاک شد.",
+            reply_markup=main_menu()
+        )
+
+        return
 
     if not data.startswith("voice_"):
         return
@@ -463,6 +518,28 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == BTN_HELP:
 
         await help_command(update, context)
+
+        return
+
+    if text == BTN_CLEAR:
+
+        confirm = InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "✅ بله، پاک کن",
+                callback_data="clear_yes"
+            ),
+            InlineKeyboardButton(
+                "❌ لغو",
+                callback_data="clear_no"
+            ),
+        ]])
+
+        await update.message.reply_text(
+            "🧹 پیام‌های این چت پاک شوند؟\n\n"
+            "فقط پیام‌های ۴۸ ساعت اخیر پاک می‌شوند "
+            "و این کار برگشت ندارد.",
+            reply_markup=confirm
+        )
 
         return
 
