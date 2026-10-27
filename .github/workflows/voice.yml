@@ -2,13 +2,24 @@ name: Ali Voice Pro
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+# فقط یک اجرا در لحظه؛ اجرای بعدی منتظر می‌ماند و بلافاصله بعد از قبلی شروع می‌شود
+concurrency:
+  group: voice-bot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    timeout-minutes: 358
 
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -22,9 +33,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install python-telegram-bot edge-tts
 
-      - name: Run bot
+      - name: Run bot, then start the next run
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python bot.py
+          code=0
+          timeout --signal=SIGINT 21000 python bot.py || code=$?
+          if [ "$code" -eq 124 ]; then
+            echo "Time is up, starting the next run"
+            gh workflow run voice.yml --repo "${{ github.repository }}" --ref main
+          else
+            exit "$code"
+          fi
