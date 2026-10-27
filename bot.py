@@ -611,21 +611,6 @@ async def post_init(app):
         BotCommand("help", "راهنما"),
     ])
 
-    try:
-
-        await app.bot.send_message(
-            chat_id=int(OWNER_CHAT_ID),
-            text=(
-                "✅ ربات روشن شد.\n\n"
-                "زبان را انتخاب کن و متن را بفرست."
-            ),
-            reply_markup=main_menu()
-        )
-
-    except Exception as e:
-
-        print("STARTUP MESSAGE ERROR:", repr(e))
-
 
 def main():
 
